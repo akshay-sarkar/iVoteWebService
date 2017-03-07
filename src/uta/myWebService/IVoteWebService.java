@@ -39,12 +39,11 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/login")
 	public String login(@QueryParam("emailId") String emailId, @QueryParam("pwd") String pwd){
-		System.out.println("Reached Here.. email= "+ emailId +" pwd="+pwd);	    
-	    
+		//System.out.println("Reached Here.. email= "+ emailId +" pwd="+pwd);
 		try {
 			conn = dbConnection();
 			stmt = conn.createStatement();
-			rs = stmt.executeQuery("select fname,lname from users where emailID='"+emailId+"' and pwd='"+pwd+"'");
+			rs = stmt.executeQuery("select fname,lname from users where emailID='"+emailId+"' and pwd='"+pwd+"' and isVerified = true");
 			if(rs.next()){
 				return "Successfull";
 			}else{
@@ -75,18 +74,22 @@ public class IVoteWebService {
 		String query = "INSERT INTO `ivote`.`students` "
 				+ "( `fname`, `lname`, `utaID`, `phone`, `pwd`, `emailID`, `isAdmin`, `isVerified`) "
 				+ "VALUES  ( ?, ?, ?, ?, ?, ?, ?, ?)";
-		conn = dbConnection();
+		
 		try {
+			conn = dbConnection();
 			prepStmt = conn.prepareStatement(query);
-			prepStmt.setString(0, fname);
-			prepStmt.setString(1, lname);
-			prepStmt.setFloat(2, Integer.parseInt(utaID));
-			prepStmt.setString(3, phone);
-			prepStmt.setString(4, pwd);
-			prepStmt.setString(5, emailID);
-			prepStmt.setString(6, "false");
+			prepStmt.setString(1, fname);
+			prepStmt.setString(2, lname);
+			prepStmt.setFloat(3, Integer.parseInt(utaID));
+			prepStmt.setString(4, phone);
+			prepStmt.setString(5, pwd);
+			prepStmt.setString(6, emailID);
 			prepStmt.setString(7, "false");
-			prepStmt.executeUpdate();
+			prepStmt.setString(8, "false");
+			int isCreated = prepStmt.executeUpdate();
+			if(isCreated > 0 ){
+				return "Created";
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return "Not Registered";
@@ -113,6 +116,7 @@ public class IVoteWebService {
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery("select fname from students where emailID='"+emailID+"' and otp='"+otp+"'");
 			if(rs.next()){
+				/* TODO: Update in DB for Student to is Verified*/
 				return "Successfull";
 			}else{
 				return "Unsuccessfull";
@@ -143,7 +147,7 @@ public class IVoteWebService {
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery("select emailID from students where emailID="+emailID);
 			if(rs.next()){
-				/* Send email to Registered Student */
+				/* TODO: Send email to Registered Student */
 				return "Email Sent";
 			}else{
 				return "Not Registered Student. Please Register Yourself";
@@ -161,4 +165,42 @@ public class IVoteWebService {
 		}
 		return "Not Registered Student. Please Register Yourself";
 	}
+
+	/* Poll Management - ADD */
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/createPoll")
+	public String createPoll(@QueryParam("pollName") String pollName, @QueryParam("pollStartDate") String pollStartDate,
+			@QueryParam("pollEndDate") String pollEndDate){
+		String query = "INSERT INTO ivote.poll "
+				+ "( pollName, pollStartDate, pollEndDate, isActive, isResultNotified) "
+				+ "VALUES (?, ?, ?, ?, ?)";
+		
+		try {
+			conn = dbConnection();
+			prepStmt = conn.prepareStatement(query);
+			prepStmt.setString(1, pollName);
+			prepStmt.setString(2, pollStartDate);
+			prepStmt.setString(3, pollEndDate);
+			prepStmt.setString(4, "false");
+			prepStmt.setString(5, "false");
+			int isCreated = prepStmt.executeUpdate();
+			if(isCreated > 0 ){
+				return "Created";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return "Not Created";
+		} finally {
+			try {
+				prepStmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return "Not Created";
+	}
+
 }
