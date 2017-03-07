@@ -203,4 +203,24 @@ public class IVoteWebService {
 		return "Not Created";
 	}
 
+	/* TODO: Poll Management  - Delete */
+	
+	/* TODO: Poll Management  - Activate */
+	
+	/* Poll Management  - Notify Result */
+	//TODO: Using Google Cloud Messaging or Firebase Cloud Messaging Services 
+	
+	/* TODO: Poll Management  - Notfiy End Date */
+	
+	
+	// 	Iteration 3: 
+	/* TODO: Student Survey Data Collected and Analyzed - Produced List of Candidates */
+	
+	/* TODO: Store Vote Casting API   - castVote(utaID, CandidateIds) */
+	
+	/* TODO: Is Vote Already Casted */
+	
+	/* TODO: View Result */
+	
+	
 }
