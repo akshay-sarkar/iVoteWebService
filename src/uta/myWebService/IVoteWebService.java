@@ -204,14 +204,112 @@ public class IVoteWebService {
 	}
 
 	/* TODO: Poll Management  - Delete */
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/deletePoll")
+	public String createPoll(@QueryParam("pollName") String pollName){
+		String query = "DELETE FROM ivote.poll WHERE pollName = '?'";
+		
+		try {
+			conn = dbConnection();
+			prepStmt = conn.prepareStatement(query);
+			prepStmt.setString(1, pollName);
+			int isDeleted = prepStmt.executeUpdate();
+			if(isDeleted > 0 ){
+				
+				/* TODO: Since Active poll is deleted notification needs to be send notification for cancellation. */
+				return "Deleted";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return "Not Deleted";
+		} finally {
+			try {
+				prepStmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return "Not Deleted";
+	}
 	
 	/* TODO: Poll Management  - Activate */
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/activatePoll")
+	public String activatePoll(@QueryParam("pollName") String pollName){
+		String query = "UPDATE ivote.poll SET isActive = true WHERE pollName = '?'";
+		
+		try {
+			conn = dbConnection();
+			prepStmt = conn.prepareStatement(query);
+			prepStmt.setString(1, pollName);
+			int isUpdated = prepStmt.executeUpdate();
+			if(isUpdated > 0 ){
+				
+				/* TODO: Since Poll is Activated Notification needs to be send to the Registered Student  */
+				return "Activated";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return "Not Activated";
+		} finally {
+			try {
+				prepStmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return "Not Activated";
+	}
+	
 	
 	/* Poll Management  - Notify Result */
-	//TODO: Using Google Cloud Messaging or Firebase Cloud Messaging Services 
+	//TODO: Using Google Cloud Messaging or Firebase Cloud Messaging Services
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/notifyResult")
+	public String notifyResult(@QueryParam("pollName") String pollName){
+		String query = "UPDATE ivote.poll SET 'isResultNotified' = 'true' WHERE pollName = '?'";
+		
+		try {
+			conn = dbConnection();
+			prepStmt = conn.prepareStatement(query);
+			prepStmt.setString(1, pollName);
+			int isUpdated = prepStmt.executeUpdate();
+			if(isUpdated > 0 ){
+				
+				/* TODO: Notification result to the students and candidates(email)  */
+				return "Result Sent";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return "Result Not Sent";
+		} finally {
+			try {
+				prepStmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return "Result Not Sent";
+	}
 	
 	/* TODO: Poll Management  - Notfiy End Date */
-	
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/notifyResult")
+	public String notifyEndDate(@QueryParam("pollName") String pollName){
+	    // TODO: Needs to send reminder notification to student regarding the poll end date and time. 
+		return "Poll Reminder Sent";
+	}
 	
 	// 	Iteration 3: 
 	/* TODO: Student Survey Data Collected and Analyzed - Produced List of Candidates */
@@ -222,5 +320,10 @@ public class IVoteWebService {
 	
 	/* TODO: View Result */
 	
+	/* TODO: Candidate Management  - Add */
+	
+	/* TODO: Candidate Management  - Delete */
+	
+	/* TODO: Candidate Management  - Edit */
 	
 }
