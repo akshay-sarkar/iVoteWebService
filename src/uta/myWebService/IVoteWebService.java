@@ -1,5 +1,6 @@
 package uta.myWebService;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -12,6 +13,10 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+
+import com.google.gson.JsonObject;
+
+import uta.FCM.FCMHelper;
 
 @Path("/testWS")
 public class IVoteWebService {
@@ -32,6 +37,35 @@ public class IVoteWebService {
 		}
 		return conn;		
 	}
+	/* FCM Service - https://github.com/MOSDEV82/fcmhelper */
+	public void sendNotification(String Message){
+		
+		String someValue = "Just a demo, really...";
+		new Thread(new Runnable() {
+		    private String myParam;
+		    public Runnable init(String myParam) {
+		        this.myParam = myParam;
+		        return this;
+		    }
+		    @Override
+		    public void run() {
+		        System.out.println("This is called from another thread.");
+		        System.out.println(this.myParam);
+				JsonObject notificationObject = new JsonObject();
+				notificationObject.addProperty("body", "iVote");
+				notificationObject.addProperty("title", myParam);
+				FCMHelper fcm = FCMHelper.getInstance();
+				try {
+					String str = fcm.sendNotification(FCMHelper.TYPE_TO, "<DEVICE_TOKEN HERE>", notificationObject);
+					System.out.println(str);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		    }
+		}.init(someValue)).start();
+	}
+	
 	
 	/* Called during Student and Admin login */
 	@GET
@@ -39,12 +73,13 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/login")
 	public String login(@QueryParam("emailId") String emailId, @QueryParam("pwd") String pwd){
-		//System.out.println("Reached Here.. email= "+ emailId +" pwd="+pwd);
+		System.out.println("Reached Here.. email= "+ emailId +" pwd="+pwd);
 		try {
 			conn = dbConnection();
 			stmt = conn.createStatement();
-			rs = stmt.executeQuery("select fname,lname from users where emailID='"+emailId+"' and pwd='"+pwd+"' and isVerified = true");
+			rs = stmt.executeQuery("select fname,lname from students where emailID='"+emailId+"' and pwd='"+pwd+"' and isVerified = 'true'");
 			if(rs.next()){
+				// sendNotification("Welcome Notfication !!"); /* unblock this for sending notification */
 				return "Successfull";
 			}else{
 				return "Unsuccessfull";
@@ -139,7 +174,7 @@ public class IVoteWebService {
 	@GET
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
-	@Path("/registerVerification")
+	@Path("/forgotPassword")
 	public String forgotPassword(@QueryParam("emailID") String emailID){
 		
 		try {
@@ -305,7 +340,7 @@ public class IVoteWebService {
 	@GET
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
-	@Path("/notifyResult")
+	@Path("/notifyEndDate")
 	public String notifyEndDate(@QueryParam("pollName") String pollName){
 	    // TODO: Needs to send reminder notification to student regarding the poll end date and time. 
 		return "Poll Reminder Sent";
