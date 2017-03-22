@@ -6,7 +6,14 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Properties;
 
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -24,6 +31,10 @@ public class IVoteWebService {
 	ResultSet rs = null;
     Statement stmt = null;
     java.sql.PreparedStatement prepStmt = null;
+    String data="";
+    String lineSeperator="#&#";
+    String columentSeperator = "@&@";
+    
 	/* DB Connection */
 	public Connection dbConnection(){
 		try {
@@ -66,6 +77,78 @@ public class IVoteWebService {
 		}.init(someValue)).start();
 	}
 	
+	
+	/* Send Email API*/
+	public void sendEmailID(String emailId, String Password){
+		
+		new Thread(new Runnable() {
+		    private String myParam;
+		    private String password;
+		    public Runnable init(String myParamEmail, String Password) {
+		        this.myParam = myParamEmail;
+		        this.password = Password;
+		        return this;
+		    }
+		    @Override
+		    public void run() {
+		        System.out.println("This is called from another thread.");
+		        System.out.println(this.myParam + "  "+ this.password);
+		     // Recipient's email ID needs to be mentioned.
+		        String to = "akshay.sarkar.dbit@gmail.com;"+this.myParam;
+
+		        // Sender's email ID needs to be mentioned
+		        String from = "ivoteapp.edu@gmail.com";
+
+		        // Assuming you are sending email from localhost
+		        String host = "localhost";
+
+		        // Get system properties
+		        Properties properties = System.getProperties();
+
+		        // Setup mail server
+		        properties.put("mail.smtp.auth", "true");
+		        properties.put("mail.smtp.starttls.enable", "true");
+		        properties.put("mail.smtp.host", "smtp.gmail.com");
+		        properties.put("mail.smtp.port", "587");
+		        properties.put("mail.user", "ivoteapp.edu");
+		        properties.put("mail.password", "ivoteapp");
+
+		        // Get the default Session object.
+		        Session session = Session.getDefaultInstance(properties);
+
+		        try {
+		           // Create a default MimeMessage object.
+		           MimeMessage message = new MimeMessage(session);
+
+		           // Set From: header field of the header.
+		           message.setFrom(new InternetAddress(from));
+
+		           // Set To: header field of the header.
+		           message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
+
+		           // Set Subject: header field
+		           message.setSubject("Your Credentials for the accessing the iVOte App.");
+
+		           // Now set the actual message
+		           message.setText("Email Id:"+ this.myParam +" and Password:"+this.password);
+
+		           // Send message
+		           Transport t = session.getTransport("smtp");
+		           try {
+		               t.connect("ivoteapp.edu@gmail.com", "ivoteapp");
+		               t.sendMessage(message, message.getAllRecipients());
+		           } catch (Exception e) {
+		               System.out.println("Error encountered while sending the email");
+		               e.printStackTrace();
+		           } finally {
+		               t.close();
+		           }
+		        }catch (MessagingException mex) {
+		           mex.printStackTrace();
+		        }
+		    }
+		}.init(emailId, Password)).start();
+	}
 	
 	/* Called during Student and Admin login */
 	@GET
@@ -176,13 +259,14 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/forgotPassword")
 	public String forgotPassword(@QueryParam("emailID") String emailID){
-		
+		System.out.println("Reached Here.. email= "+ emailID);
 		try {
 			conn = dbConnection();
 			stmt = conn.createStatement();
-			rs = stmt.executeQuery("select emailID from students where emailID="+emailID);
+			rs = stmt.executeQuery("select emailID,pwd from students where emailID ='"+emailID+"'");
 			if(rs.next()){
 				/* TODO: Send email to Registered Student */
+				sendEmailID(rs.getString("emailID"), rs.getString("pwd"));
 				return "Email Sent";
 			}else{
 				return "Not Registered Student. Please Register Yourself";
@@ -201,6 +285,46 @@ public class IVoteWebService {
 		return "Not Registered Student. Please Register Yourself";
 	}
 
+	/* Poll Management - Display */
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/displayPoll")
+	public String displayPoll(){
+		System.out.println("Reached Here.. displayPoll");
+		try {
+			conn = dbConnection();
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery("SELECT poll.idPoll,  poll.pollName,"
+					+ " poll.pollStartDate, poll.pollEndDate,"
+					+ " poll.isActive, poll.isResultNotified  FROM ivote.poll");
+			// iterate through the java resultset
+	      while (rs.next())
+	      {
+	        int id = rs.getInt("idPoll");
+	        String firstName = rs.getString("pollName");
+	        String pollStartDate = rs.getString("pollStartDate");
+	        String pollEndDate = rs.getString("pollEndDate");
+	        String isActive = rs.getString("isActive");
+	        String isResultNotified = rs.getString("isResultNotified");
+	        data+= id + columentSeperator + firstName+ columentSeperator + pollStartDate + columentSeperator
+	        		+ pollEndDate + columentSeperator + isActive+ columentSeperator+ isResultNotified + lineSeperator; 
+	        
+	      }
+	      return data;
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				rs.close();
+				stmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return "";
+	}
 	/* Poll Management - ADD */
 	@GET
 	@Consumes(MediaType.TEXT_PLAIN)
@@ -208,6 +332,7 @@ public class IVoteWebService {
 	@Path("/createPoll")
 	public String createPoll(@QueryParam("pollName") String pollName, @QueryParam("pollStartDate") String pollStartDate,
 			@QueryParam("pollEndDate") String pollEndDate){
+		System.out.println("Poll Name: "+pollName);
 		String query = "INSERT INTO ivote.poll "
 				+ "( pollName, pollStartDate, pollEndDate, isActive, isResultNotified) "
 				+ "VALUES (?, ?, ?, ?, ?)";
@@ -243,7 +368,7 @@ public class IVoteWebService {
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/deletePoll")
-	public String createPoll(@QueryParam("pollName") String pollName){
+	public String deletePoll(@QueryParam("pollName") String pollName){
 		String query = "DELETE FROM ivote.poll WHERE pollName = '?'";
 		
 		try {
