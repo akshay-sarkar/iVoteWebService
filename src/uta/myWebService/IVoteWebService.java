@@ -38,7 +38,7 @@ public class IVoteWebService {
 	/* DB Connection */
 	public Connection dbConnection(){
 		try {
-			Class.forName("com.mysql.jdbc.Driver");
+			Class.forName("com.mysql.cj.jdbc.Driver");
 			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ivote", "root", "admin");
 			return conn;
 		}catch (ClassNotFoundException e) {
@@ -76,10 +76,75 @@ public class IVoteWebService {
 		    }
 		}.init(someValue)).start();
 	}
+	/* Send Email  - ForgotPasssword*/
+	public void sendEmailforOTP(String emailId){
+		new Thread(new Runnable() {
+		    private String myParam;
+		    private String password;
+		    public Runnable init(String myParamEmail) {
+		        this.myParam = myParamEmail;
+		        return this;
+		    }
+		    @Override
+		    public void run() {
+		        System.out.println("This is called from another thread.");
+		        System.out.println(this.myParam + "  "+ this.password);
+		     // Recipient's email ID needs to be mentioned.
+		        String to = this.myParam;
+
+		        // Sender's email ID needs to be mentioned
+		        String from = "ivoteapp.edu@gmail.com";
+
+		        // Get system properties
+		        Properties properties = System.getProperties();
+
+		        // Setup mail server
+		        properties.put("mail.smtp.auth", "true");
+		        properties.put("mail.smtp.starttls.enable", "true");
+		        properties.put("mail.smtp.host", "smtp.gmail.com");
+		        properties.put("mail.smtp.port", "587");
+		        properties.put("mail.user", "ivoteapp.edu");
+		        properties.put("mail.password", "ivoteapp");
+
+		        // Get the default Session object.
+		        Session session = Session.getDefaultInstance(properties);
+
+		        try {
+		           // Create a default MimeMessage object.
+		           MimeMessage message = new MimeMessage(session);
+
+		           // Set From: header field of the header.
+		           message.setFrom(new InternetAddress(from));
+
+		           // Set To: header field of the header.
+		           message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
+
+		           // Set Subject: header field
+		           message.setSubject("Your Credentials for the accessing the iVOte App.");
+
+		           // Now set the actual message
+		           message.setText("Thank you for Registeration. Please verify yourself in application using OTP 9299 for Email Id:"+ this.myParam);
+
+		           // Send message
+		           Transport t = session.getTransport("smtp");
+		           try {
+		               t.connect("ivoteapp.edu@gmail.com", "ivoteapp");
+		               t.sendMessage(message, message.getAllRecipients());
+		           } catch (Exception e) {
+		               System.out.println("Error encountered while sending the email");
+		               e.printStackTrace();
+		           } finally {
+		               t.close();
+		           }
+		        }catch (MessagingException mex) {
+		           mex.printStackTrace();
+		        }
+		    }
+		}.init(emailId)).start();
+	}
 	
-	
-	/* Send Email API*/
-	public void sendEmailID(String emailId, String Password){
+	/* Send Email  - ForgotPasssword*/
+	public void sendEmailForgotPassword(String emailId, String Password){
 		
 		new Thread(new Runnable() {
 		    private String myParam;
@@ -98,9 +163,6 @@ public class IVoteWebService {
 
 		        // Sender's email ID needs to be mentioned
 		        String from = "ivoteapp.edu@gmail.com";
-
-		        // Assuming you are sending email from localhost
-		        String host = "localhost";
 
 		        // Get system properties
 		        Properties properties = System.getProperties();
@@ -189,9 +251,10 @@ public class IVoteWebService {
 	public String register(@QueryParam("fname") String fname, @QueryParam("lname") String lname,
 			@QueryParam("utaID") String utaID, @QueryParam("phone") String phone,
 			@QueryParam("pwd") String pwd, @QueryParam("emailID") String emailID){
-		String query = "INSERT INTO `ivote`.`students` "
-				+ "( `fname`, `lname`, `utaID`, `phone`, `pwd`, `emailID`, `isAdmin`, `isVerified`) "
-				+ "VALUES  ( ?, ?, ?, ?, ?, ?, ?, ?)";
+		System.out.println("Reached Here - register .. email= "+ emailID +" pwd="+pwd);
+		String query = "INSERT INTO students "
+				+ "( fname, lname, utaID, phone, pwd, emailID, isAdmin, isVerified, OTP) "
+				+ "VALUES  ( ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 		
 		try {
 			conn = dbConnection();
@@ -204,9 +267,12 @@ public class IVoteWebService {
 			prepStmt.setString(6, emailID);
 			prepStmt.setString(7, "false");
 			prepStmt.setString(8, "false");
+			prepStmt.setString(9, "9299");
 			int isCreated = prepStmt.executeUpdate();
 			if(isCreated > 0 ){
-				return "Created";
+				/* Send OTP to Student Email Id - 9299 */
+				sendEmailforOTP(emailID);
+				return "Registered";
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -228,14 +294,15 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/registerVerification")
 	public String registerVerification(@QueryParam("otp") String otp, @QueryParam("emailID") String emailID){
-		
+		System.out.println("Reached Here - register .. email= "+ emailID +" otp="+otp);
 		try {
 			conn = dbConnection();
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery("select fname from students where emailID='"+emailID+"' and otp='"+otp+"'");
 			if(rs.next()){
 				/* TODO: Update in DB for Student to is Verified*/
-				return "Successfull";
+				int t= stmt.executeUpdate("UPDATE students SET isVerified ='true' WHERE emailID = '"+emailID+"'"); 
+				if(t>0)return "Successfull";
 			}else{
 				return "Unsuccessfull";
 			}
@@ -266,7 +333,7 @@ public class IVoteWebService {
 			rs = stmt.executeQuery("select emailID,pwd from students where emailID ='"+emailID+"'");
 			if(rs.next()){
 				/* TODO: Send email to Registered Student */
-				sendEmailID(rs.getString("emailID"), rs.getString("pwd"));
+				sendEmailForgotPassword(rs.getString("emailID"), rs.getString("pwd"));
 				return "Email Sent";
 			}else{
 				return "Not Registered Student. Please Register Yourself";
