@@ -222,9 +222,12 @@ public class IVoteWebService {
 		try {
 			conn = dbConnection();
 			stmt = conn.createStatement();
-			rs = stmt.executeQuery("select fname,lname from students where emailID='"+emailId+"' and pwd='"+pwd+"' and isVerified = 'true'");
+			rs = stmt.executeQuery("select fname,lname,isAdmin from students where emailID='"+emailId+"' and pwd='"+pwd+"' and isVerified = 'true'");
 			if(rs.next()){
 				// sendNotification("Welcome Notfication !!"); /* unblock this for sending notification */
+				if(rs.getString("isAdmin").equalsIgnoreCase("true")){
+					return "Admin";
+				}
 				return "Successfull";
 			}else{
 				return "Unsuccessfull";
@@ -493,7 +496,37 @@ public class IVoteWebService {
 		}
 		return "Not Activated";
 	}
-	
+	/* TODO: Poll Management  - Deactivate */
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/activatePoll")
+	public String deactivatePoll(@QueryParam("pollName") String pollName){
+		String query = "UPDATE ivote.poll SET isActive = false WHERE pollName = '?'";
+		
+		try {
+			conn = dbConnection();
+			prepStmt = conn.prepareStatement(query);
+			prepStmt.setString(1, pollName);
+			int isUpdated = prepStmt.executeUpdate();
+			if(isUpdated > 0 ){
+				
+				/* TODO: Since Poll is Activated Notification needs to be send to the Registered Student  */
+				return "Dectivated";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return "Not Deactivated";
+		} finally {
+			try {
+				prepStmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return "Not Deactivated";
+	}
 	
 	/* Poll Management  - Notify Result */
 	//TODO: Using Google Cloud Messaging or Firebase Cloud Messaging Services
@@ -542,7 +575,18 @@ public class IVoteWebService {
 	/* TODO: Student Survey Data Collected and Analyzed - Produced List of Candidates */
 	
 	/* TODO: Store Vote Casting API   - castVote(utaID, CandidateIds) */
-	
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/notifyEndDate")
+	public String castVote(@QueryParam("utaID") String utaID, @QueryParam("candidateIds") int[] CandidateIds){
+		System.out.println("utaID : "+utaID+ " CandidateIds"+CandidateIds);
+		
+		// get Active Poll And then push data in "votecasted"table
+		
+		return "Voted";
+		
+	}
 	/* TODO: Is Vote Already Casted */
 	
 	/* TODO: View Result */
