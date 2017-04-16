@@ -218,13 +218,15 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/login")
 	public String login(@QueryParam("emailId") String emailId, @QueryParam("pwd") String pwd){
-		System.out.println("Reached Here.. email= "+ emailId +" pwd="+pwd);
+		System.out.println("Tes..t Reached Here.. email= "+ emailId +" pwd="+pwd);
 		try {
 			conn = dbConnection();
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery("select fname,lname,isAdmin from students where emailID='"+emailId+"' and pwd='"+pwd+"' and isVerified = 'true'");
 			if(rs.next()){
 				// sendNotification("Welcome Notfication !!"); /* unblock this for sending notification */
+				
+				System.out.println("rs.getString(isAdmin) =>"+rs.getString("isAdmin"));
 				if(rs.getString("isAdmin").equalsIgnoreCase("true")){
 					return "Admin";
 				}
@@ -438,18 +440,17 @@ public class IVoteWebService {
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/deletePoll")
-	public String deletePoll(@QueryParam("pollName") String pollName){
-		String query = "DELETE FROM ivote.poll WHERE pollName = '?'";
+	public String deletePoll(@QueryParam("pollId") String pollId){
+		String query = "DELETE FROM ivote.poll WHERE idPoll = ?";
 		
 		try {
 			conn = dbConnection();
 			prepStmt = conn.prepareStatement(query);
-			prepStmt.setString(1, pollName);
+			prepStmt.setInt(1, Integer.parseInt(pollId));
 			int isDeleted = prepStmt.executeUpdate();
 			if(isDeleted > 0 ){
-				
 				/* TODO: Since Active poll is deleted notification needs to be send notification for cancellation. */
-				return "Deleted";
+				return "Poll Deleted";
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -470,13 +471,13 @@ public class IVoteWebService {
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/activatePoll")
-	public String activatePoll(@QueryParam("pollName") String pollName){
-		String query = "UPDATE ivote.poll SET isActive = true WHERE pollName = '?'";
+	public String activatePoll(@QueryParam("pollName") String pollId){
+		String query = "UPDATE ivote.poll SET isActive = true WHERE idPoll = '?'";
 		
 		try {
 			conn = dbConnection();
 			prepStmt = conn.prepareStatement(query);
-			prepStmt.setString(1, pollName);
+			prepStmt.setInt(1, Integer.parseInt(pollId));
 			int isUpdated = prepStmt.executeUpdate();
 			if(isUpdated > 0 ){
 				
@@ -500,14 +501,14 @@ public class IVoteWebService {
 	@GET
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
-	@Path("/activatePoll")
-	public String deactivatePoll(@QueryParam("pollName") String pollName){
-		String query = "UPDATE ivote.poll SET isActive = false WHERE pollName = '?'";
+	@Path("/deactivatePoll")
+	public String deactivatePoll(@QueryParam("pollName") String pollId){
+		String query = "UPDATE ivote.poll SET isActive = false WHERE idPoll = '?'";
 		
 		try {
 			conn = dbConnection();
 			prepStmt = conn.prepareStatement(query);
-			prepStmt.setString(1, pollName);
+			prepStmt.setInt(1, Integer.parseInt(pollId));
 			int isUpdated = prepStmt.executeUpdate();
 			if(isUpdated > 0 ){
 				
@@ -534,13 +535,14 @@ public class IVoteWebService {
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/notifyResult")
-	public String notifyResult(@QueryParam("pollName") String pollName){
-		String query = "UPDATE ivote.poll SET 'isResultNotified' = 'true' WHERE pollName = '?'";
+	public String notifyResult(@QueryParam("pollId") String pollId){
+		System.out.println(" notifyResult => "+ pollId);
+		String query = "UPDATE ivote.poll SET isResultNotified='true' WHERE idPoll = ?";
 		
 		try {
 			conn = dbConnection();
 			prepStmt = conn.prepareStatement(query);
-			prepStmt.setString(1, pollName);
+			prepStmt.setInt(1, Integer.parseInt(pollId));
 			int isUpdated = prepStmt.executeUpdate();
 			if(isUpdated > 0 ){
 				
@@ -566,8 +568,9 @@ public class IVoteWebService {
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/notifyEndDate")
-	public String notifyEndDate(@QueryParam("pollName") String pollName){
-	    // TODO: Needs to send reminder notification to student regarding the poll end date and time. 
+	public String notifyEndDate(@QueryParam("pollId") String pollId){
+		System.out.println(" notifyEndDate => "+ pollId);
+	    // TODO: Needs to send reminder notification to student regarding the poll end date and time.
 		return "Poll Reminder Sent";
 	}
 	
@@ -578,8 +581,8 @@ public class IVoteWebService {
 	@GET
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
-	@Path("/notifyEndDate")
-	public String castVote(@QueryParam("utaID") String utaID, @QueryParam("candidateIds") int[] CandidateIds){
+	@Path("/castVote")
+	public String castVote(@QueryParam("utaID") String utaID, @QueryParam("candidateIds") String CandidateIds){
 		System.out.println("utaID : "+utaID+ " CandidateIds"+CandidateIds);
 		
 		// get Active Poll And then push data in "votecasted"table
