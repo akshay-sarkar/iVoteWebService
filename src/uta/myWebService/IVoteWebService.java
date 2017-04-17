@@ -370,7 +370,7 @@ public class IVoteWebService {
 			rs = stmt.executeQuery("SELECT poll.idPoll,  poll.pollName,"
 					+ " poll.pollStartDate, poll.pollEndDate,"
 					+ " poll.isActive, poll.isResultNotified  FROM ivote.poll");
-			// iterate through the java resultset
+			// iterate through the java result  set
 	      while (rs.next())
 	      {
 	        int id = rs.getInt("idPoll");
@@ -471,8 +471,8 @@ public class IVoteWebService {
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/activatePoll")
-	public String activatePoll(@QueryParam("pollName") String pollId){
-		String query = "UPDATE ivote.poll SET isActive = true WHERE idPoll = '?'";
+	public String activatePoll(@QueryParam("pollId") String pollId){
+		String query = "UPDATE ivote.poll SET isActive='true' WHERE idPoll = ?";
 		
 		try {
 			conn = dbConnection();
@@ -482,7 +482,7 @@ public class IVoteWebService {
 			if(isUpdated > 0 ){
 				
 				/* TODO: Since Poll is Activated Notification needs to be send to the Registered Student  */
-				return "Activated";
+				return "Poll Activated";
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -502,8 +502,8 @@ public class IVoteWebService {
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/deactivatePoll")
-	public String deactivatePoll(@QueryParam("pollName") String pollId){
-		String query = "UPDATE ivote.poll SET isActive = false WHERE idPoll = '?'";
+	public String deactivatePoll(@QueryParam("pollId") String pollId){
+		String query = "UPDATE ivote.poll SET isActive = 'false' WHERE idPoll = ?";
 		
 		try {
 			conn = dbConnection();
@@ -513,7 +513,7 @@ public class IVoteWebService {
 			if(isUpdated > 0 ){
 				
 				/* TODO: Since Poll is Activated Notification needs to be send to the Registered Student  */
-				return "Dectivated";
+				return "Poll Dectivated";
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -576,6 +576,14 @@ public class IVoteWebService {
 	
 	// 	Iteration 3: 
 	/* TODO: Student Survey Data Collected and Analyzed - Produced List of Candidates */
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/surveyData")
+	public String surveyData(@QueryParam("utaID") String utaID){
+		/* TODO: Return Candidates here */
+		return "";
+	}
 	
 	/* TODO: Store Vote Casting API   - castVote(utaID, CandidateIds) */
 	@GET
@@ -595,8 +603,87 @@ public class IVoteWebService {
 	/* TODO: View Result */
 	
 	/* TODO: Candidate Management  - Add */
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/addCandidate")
+	public String addCandidate(@QueryParam("votePostionID") String votePostionID,
+			@QueryParam("candidateFname") String candidateFname,
+			@QueryParam("candidateLname") String candidateLname,
+			@QueryParam("candidateEmailId") String candidateEmailId,
+			@QueryParam("candidateDOB") String candidateDOB,
+			@QueryParam("candidateGender") String candidateGender,
+			@QueryParam("candidateCourse") String candidateCourse,
+			@QueryParam("candidateQualities") String candidateQualities,
+			@QueryParam("candidateInterests") String candidateInterests,
+			@QueryParam("candidatesStudentOrganization") String candidatesStudentOrganization,
+			@QueryParam("candidateCommunityServiceHours") String candidateCommunityServiceHours){
+		String query = "INSERT INTO ivote.candidates ( votePostionID, "
+				+ "candidateFname, candidateLname, candidateEmailId, candidateDOB,"
+				+ " candidateGender, candidateCourse, candidateQualities, candidateInterests,"
+				+ " candidatesStudentOrganization, candidateCommunityServiceHours)"
+				+ " VALUES ( ?, ? ,? ,? ,? ,? ,?, ?, ?, ?, ?)";
+		try {
+			conn = dbConnection();
+			prepStmt = conn.prepareStatement(query);
+			prepStmt.setInt(1, Integer.parseInt(votePostionID));
+			prepStmt.setString(2, candidateFname);
+			prepStmt.setString(3, candidateLname);
+			prepStmt.setString(4, candidateEmailId);
+			prepStmt.setString(5, candidateDOB);
+			prepStmt.setString(6, candidateGender);
+			prepStmt.setString(7, candidateCourse);
+			prepStmt.setString(8, candidateQualities);
+			prepStmt.setString(9, candidateInterests);
+			prepStmt.setString(10, candidateQualities);
+			prepStmt.setString(11, candidateCommunityServiceHours);
+			int isCreated = prepStmt.executeUpdate();
+			if(isCreated > 0 ){
+				return "Candidate Added";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return "Not Created";
+		} finally {
+			try {
+				prepStmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return "Not Created";		
+	}
 	
 	/* TODO: Candidate Management  - Delete */
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/deleteCandidate")
+	public String deleteCandidate(@QueryParam("candidateId") String candidateId){
+		String query =  "DELETE FROM ivote.candidates WHERE id=?";
+		try {
+			conn = dbConnection();
+			prepStmt = conn.prepareStatement(query);
+			prepStmt.setInt(1, Integer.parseInt(candidateId));
+			int isDeleted = prepStmt.executeUpdate();
+			if(isDeleted > 0 ){
+				/* TODO: Since Poll is deleted Notification send for cancellation to candidate */
+				return "Poll Deleted";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return "Not Deleted";
+		} finally {
+			try {
+				prepStmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return "Not Deleted";
+	}
 	
 	/* TODO: Candidate Management  - Edit */
 	
