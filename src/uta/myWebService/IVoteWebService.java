@@ -241,11 +241,10 @@ public class IVoteWebService {
 		try {
 			conn = dbConnection();
 			stmt = conn.createStatement();
-			rs = stmt.executeQuery("select fname,lname,isAdmin from students where emailID='"+emailId+"' and pwd='"+pwd+"' and isVerified = 'true'");
+			rs = stmt.executeQuery("select utaID,isAdmin from students where emailID='"+emailId+"' and pwd='"+pwd+"' and isVerified = 'true'");
 			if(rs.next()){
+				String 	utaID=rs.getString("utaID");
 				// sendNotification("Welcome Notfication !!"); /* unblock this for sending notification */
-				
-				System.out.println("rs.getString(isAdmin) =>"+rs.getString("isAdmin"));
 				if(rs.getString("isAdmin").equalsIgnoreCase("true")){
 					return "Admin";
 				}
@@ -253,13 +252,13 @@ public class IVoteWebService {
 				rs_query_activePoll = stmt.executeQuery(query_activePoll);
 				if(rs_query_activePoll.next()){
 					return "ActivePoll"+columentSeperator+rs_query_activePoll.getInt("idPoll")+
-							columentSeperator+rs_query_activePoll.getString("pollName");
+							columentSeperator+rs_query_activePoll.getString("pollName")+ columentSeperator+ utaID;
 				}
 				//retrieve last active result
 				rs_query_lastActivePoll = stmt.executeQuery(query_lastActivePoll);
 				if(rs_query_lastActivePoll.next()){
 					return "ResultPoll"+columentSeperator+rs_query_lastActivePoll.getInt("idPoll")+
-							columentSeperator+rs_query_lastActivePoll.getString("pollName");
+							columentSeperator+rs_query_lastActivePoll.getString("pollName")+ columentSeperator+ utaID;
 				}
 			}else{
 				return "No Login";
@@ -394,7 +393,6 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/displayPoll")
 	public String displayPoll(){
-		System.out.println("Reached Here.. displayPoll");
 		try {
 			conn = dbConnection();
 			stmt = conn.createStatement();
@@ -644,7 +642,6 @@ public class IVoteWebService {
 	      {
 	    	  int id = rs.getInt("idPoll");
 	    	  if(CandidateIds.contains(",")){ 
-	    		  System.out.println("Here..");
 	    		  String[] str = CandidateIds.split(",");
 	    		  for(int i=0; i<str.length;i++){
 	    			prepStmt = conn.prepareStatement(query_castVote);
@@ -683,8 +680,28 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/isAlreadyVoted")
 	public String isAlreadyVoted(@QueryParam("utaID") String utaID, @QueryParam("pollId") String pollId){
-		
-		return utaID;
+		String query = "SELECT utaID, PollId, PollOptionId FROM ivote.votecasted "
+				+ "where PollId="+Integer.parseInt(pollId)+" and utaID="+Integer.parseInt(utaID);
+		try {
+			conn = dbConnection();
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(query);
+	      if (rs.next())
+	      {
+	        return "Vote Already Casted";
+	      }
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				rs.close();
+				stmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return "Vote Not Casted";
 	}
 	
 	/* TODO: View Result */
