@@ -6,6 +6,10 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 
 import javax.mail.Message;
@@ -144,23 +148,24 @@ public class IVoteWebService {
 	}
 	
 	/* Send Email  - ForgotPasssword*/
-	public void sendEmailForgotPassword(String emailId, String Password){
+	public void sendEmailForgotPassword(String emailId, String Password, String category){
 		
 		new Thread(new Runnable() {
 		    private String myParam;
 		    private String password;
-		    public Runnable init(String myParamEmail, String Password) {
+		    private String category;
+		    public Runnable init(String myParamEmail, String Password, String category) {
 		        this.myParam = myParamEmail;
 		        this.password = Password;
+		        this.category = category;
 		        return this;
 		    }
 		    @Override
 		    public void run() {
 		        System.out.println("This is called from another thread.");
-		        System.out.println(this.myParam + "  "+ this.password);
+		        System.out.println(this.myParam + "  "+ this.password + "  "+ category);
 		     // Recipient's email ID needs to be mentioned.
 		        String to = "akshay.sarkar.dbit@gmail.com;"+this.myParam;
-
 		        // Sender's email ID needs to be mentioned
 		        String from = "ivoteapp.edu@gmail.com";
 
@@ -188,12 +193,19 @@ public class IVoteWebService {
 		           // Set To: header field of the header.
 		           message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
 
-		           // Set Subject: header field
-		           message.setSubject("Your Credentials for the accessing the iVOte App.");
+		           if(category.equalsIgnoreCase("forgotPassword")){
+		        	   // Set Subject: header field
+			           message.setSubject("Your Credentials for the accessing the iVOte App.");
+			           // Now set the actual message
+			           message.setText("Email Id:"+ this.myParam +" and Password:"+this.password);
 
-		           // Now set the actual message
-		           message.setText("Email Id:"+ this.myParam +" and Password:"+this.password);
-
+		           }else{
+		        	   // Set Subject: header field
+			           message.setSubject("Candidate Removed");
+			           // Now set the actual message
+			           message.setText("You have been removed from "+this.password);
+		           }
+		           
 		           // Send message
 		           Transport t = session.getTransport("smtp");
 		           try {
@@ -209,7 +221,7 @@ public class IVoteWebService {
 		           mex.printStackTrace();
 		        }
 		    }
-		}.init(emailId, Password)).start();
+		}.init(emailId, Password, category)).start();
 	}
 	
 	/* Called during Student and Admin login */
@@ -290,7 +302,7 @@ public class IVoteWebService {
 				e.printStackTrace();
 			}
 		}
-		return "Registered";
+		return "Not Registered";
 	}
 	
 	/* Called for Register Verification */
@@ -338,7 +350,7 @@ public class IVoteWebService {
 			rs = stmt.executeQuery("select emailID,pwd from students where emailID ='"+emailID+"'");
 			if(rs.next()){
 				/* TODO: Send email to Registered Student */
-				sendEmailForgotPassword(rs.getString("emailID"), rs.getString("pwd"));
+				sendEmailForgotPassword(rs.getString("emailID"), rs.getString("pwd"), null);
 				return "Email Sent";
 			}else{
 				return "Not Registered Student. Please Register Yourself";
@@ -599,13 +611,55 @@ public class IVoteWebService {
 	@Path("/castVote")
 	public String castVote(@QueryParam("utaID") String utaID, @QueryParam("candidateIds") String CandidateIds){
 		System.out.println("utaID : "+utaID+ " CandidateIds"+CandidateIds);
-		
-		// get Active Poll And then push data in "votecasted"table
-		
-		return "Voted";
-		
+		int isCreated = 0;
+		// get Active Poll And then push data in "votecasted" table
+		String query = "SELECT idPoll FROM ivote.poll where isActive='true'";
+		String query_castVote = "INSERT INTO ivote.votecasted (utaID, yourPollPositionId, yourPollOptionId) "
+				+ "VALUES(?,?,?)";
+		try {
+			conn = dbConnection();
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(query);
+			// iterate through the java result  set
+	      while (rs.next())
+	      {
+	    	List<String> myList = new ArrayList<String>(Arrays.asList(CandidateIds.split(",")));
+	    	Iterator<String> itr=myList.iterator();  
+	    	  while(itr.hasNext()){  
+	    	   System.out.println(itr.next()); 
+	    	   	int id = rs.getInt("idPoll");
+		        prepStmt = conn.prepareStatement(query_castVote);
+		        prepStmt.setInt(1, Integer.parseInt(utaID));
+				prepStmt.setInt(2, id);
+				prepStmt.setInt(3, Integer.parseInt(itr.next()));
+				isCreated = prepStmt.executeUpdate();
+	    	  }  
+			if(isCreated > 0 ){
+				return "Vote Casted";
+			}
+	      }
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				rs.close();
+				stmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return "UnSuccessfull";
 	}
 	/* TODO: Is Vote Already Casted */
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/isAlreadyVoted")
+	public String isAlreadyVoted(@QueryParam("utaID") String utaID, @QueryParam("pollId") String pollId){
+		
+		return utaID;
+	}
 	
 	/* TODO: View Result */
 	
@@ -642,7 +696,7 @@ public class IVoteWebService {
 			prepStmt.setString(7, candidateCourse);
 			prepStmt.setString(8, candidateQualities);
 			prepStmt.setString(9, candidateInterests);
-			prepStmt.setString(10, candidateQualities);
+			prepStmt.setString(10, candidatesStudentOrganization);
 			prepStmt.setString(11, candidateCommunityServiceHours);
 			int isCreated = prepStmt.executeUpdate();
 			if(isCreated > 0 ){
@@ -668,16 +722,25 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/deleteCandidate")
 	public String deleteCandidate(@QueryParam("candidateId") String candidateId){
-		String query =  "DELETE FROM ivote.candidates WHERE id=?";
+		
+		String query =  "SELECT candidates.candidateEmailId, poll.pollName FROM candidates join poll on candidates.votePostionID=poll.idPoll and id=?";
+		String deleteQuery =  "DELETE FROM ivote.candidates WHERE id=?";
 		try {
 			conn = dbConnection();
-			prepStmt = conn.prepareStatement(query);
-			prepStmt.setInt(1, Integer.parseInt(candidateId));
-			int isDeleted = prepStmt.executeUpdate();
-			if(isDeleted > 0 ){
-				/* TODO: Since Poll is deleted Notification send for cancellation to candidate */
-				return "Poll Deleted";
-			}
+			rs = stmt.executeQuery(query);
+			// iterate through the java result  set
+		      while (rs.next())
+		      {
+		    	/* TODO: Since Poll is deleted Notification send for cancellation to candidate */
+				prepStmt = conn.prepareStatement(deleteQuery);
+				prepStmt.setInt(1, Integer.parseInt(candidateId));
+				int isDeleted = prepStmt.executeUpdate();
+				if(isDeleted > 0 ){
+					sendEmailForgotPassword(rs.getString("candidateEmailId"), rs.getString("pollName"), null);
+					return "Poll Deleted";
+				}  
+		      }
+			
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return "Not Deleted";
@@ -693,5 +756,57 @@ public class IVoteWebService {
 	}
 	
 	/* TODO: Candidate Management  - Edit */
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/editCandidate")
+	public String editCandidate(@QueryParam("candidateID") String candidateID,
+			@QueryParam("candidateFname") String candidateFname,
+			@QueryParam("candidateLname") String candidateLname,
+			@QueryParam("candidateEmailId") String candidateEmailId,
+			@QueryParam("candidateDOB") String candidateDOB,
+			@QueryParam("candidateGender") String candidateGender,
+			@QueryParam("candidateCourse") String candidateCourse,
+			@QueryParam("candidateQualities") String candidateQualities,
+			@QueryParam("candidateInterests") String candidateInterests,
+			@QueryParam("candidatesStudentOrganization") String candidatesStudentOrganization,
+			@QueryParam("candidateCommunityServiceHours") String candidateCommunityServiceHours){
+		String query = "UPDATE ivote.candidates SET candidateFname = ?,"
+				+ " candidateLname = ?, candidateEmailId = ?, candidateDOB = ?,"
+				+ " candidateGender = ?, candidateCourse = ?, candidateQualities = ?,"
+				+ " candidateInterests = ?, candidatesStudentOrganization = ?, candidateCommunityServiceHours = ?"
+				+ " WHERE id = ?;";
+		try {
+			conn = dbConnection();
+			prepStmt = conn.prepareStatement(query);
+
+			prepStmt.setString(1, candidateFname);
+			prepStmt.setString(2, candidateLname);
+			prepStmt.setString(3, candidateEmailId);
+			prepStmt.setString(4, candidateDOB);
+			prepStmt.setString(5, candidateGender);
+			prepStmt.setString(6, candidateCourse);
+			prepStmt.setString(7, candidateQualities);
+			prepStmt.setString(8, candidateInterests);
+			prepStmt.setString(9, candidatesStudentOrganization);
+			prepStmt.setString(10, candidateCommunityServiceHours);
+			prepStmt.setInt(11, Integer.parseInt(candidateID));
+			int isUpdated = prepStmt.executeUpdate();
+			if(isUpdated > 0 ){
+				return "Candidate Updated";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return "Not Updated";
+		} finally {
+			try {
+				prepStmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return "Not Updated";		
+	}
 	
 }
