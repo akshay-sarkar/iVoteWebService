@@ -43,7 +43,7 @@ public class IVoteWebService {
 	public Connection dbConnection(){
 		try {
 			Class.forName("com.mysql.cj.jdbc.Driver");
-			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ivote", "root", "admin");
+			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ivote", "root", "");
 			return conn;
 		}catch (ClassNotFoundException e) {
 			e.printStackTrace();
@@ -410,6 +410,44 @@ public class IVoteWebService {
 	        String isResultNotified = rs.getString("isResultNotified");
 	        data+= id + columentSeperator + firstName+ columentSeperator + pollStartDate + columentSeperator
 	        		+ pollEndDate + columentSeperator + isActive+ columentSeperator+ isResultNotified + lineSeperator; 
+	        
+	      }
+	      return data;
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				rs.close();
+				stmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return "";
+	}
+	
+	/* Candidate Management - Display */
+	@GET
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("/displayCandidate")
+	public String displayCandidate(){
+		System.out.println("Reached Here.. displayCand");
+		try {
+			conn = dbConnection();
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery("SELECT candidates.id,  candidates.candidateFname,"
+					+ " candidates.candidateLname  FROM ivote.candidates");
+			// iterate through the java result  set
+	      while (rs.next())
+	      {
+	        int id = rs.getInt("id");
+	        String firstName = rs.getString("candidateFname");
+	        String lastname = rs.getString("candidateLname");
+	  
+	        data+= id + columentSeperator + firstName+ columentSeperator + lastname + lineSeperator; 
+	        		
 	        
 	      }
 	      return data;
