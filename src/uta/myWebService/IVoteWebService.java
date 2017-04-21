@@ -580,7 +580,14 @@ public class IVoteWebService {
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/surveyData")
-	public String surveyData(@QueryParam("utaID") String utaID){
+	public String surveyData(@QueryParam("studentOrganization") String studentOrganization,
+			@QueryParam("communityHour") String communityHour,
+			@QueryParam("department") String department,
+			@QueryParam("qualities") String qualities,
+			@QueryParam("interest") String interest){
+		System.out.println("Here .. "+qualities + "  "+interest);
+		
+		
 		/* TODO: Return Candidates here */
 		return "";
 	}
