@@ -231,6 +231,13 @@ public class IVoteWebService {
 	@Path("/login")
 	public String login(@QueryParam("emailId") String emailId, @QueryParam("pwd") String pwd){
 		System.out.println("Tes..t Reached Here.. email= "+ emailId +" pwd="+pwd);
+		
+		String query_activePoll = "SELECT idPoll, pollName FROM ivote.poll where isActive='true'";
+		ResultSet rs_query_activePoll = null;
+		
+		String query_lastActivePoll = "SELECT idPoll, pollName FROM ivote.poll where isResultNotified='false' and isActive='false'";
+		ResultSet rs_query_lastActivePoll = null;
+		
 		try {
 			conn = dbConnection();
 			stmt = conn.createStatement();
@@ -242,12 +249,24 @@ public class IVoteWebService {
 				if(rs.getString("isAdmin").equalsIgnoreCase("true")){
 					return "Admin";
 				}
-				return "Successfull";
+				/* Get Active Poll OR Retrieve last Active Poll - isResultNotified*/
+				rs_query_activePoll = stmt.executeQuery(query_activePoll);
+				if(rs_query_activePoll.next()){
+					return "ActivePoll"+columentSeperator+rs_query_activePoll.getInt("idPoll")+
+							columentSeperator+rs_query_activePoll.getString("pollName");
+				}
+				//retrieve last active result
+				rs_query_lastActivePoll = stmt.executeQuery(query_lastActivePoll);
+				if(rs_query_lastActivePoll.next()){
+					return "ResultPoll"+columentSeperator+rs_query_lastActivePoll.getInt("idPoll")+
+							columentSeperator+rs_query_lastActivePoll.getString("pollName");
+				}
 			}else{
-				return "Unsuccessfull";
+				return "No Login";
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
+			return "No Login";
 		} finally {
 			try {
 				rs.close();
@@ -257,7 +276,7 @@ public class IVoteWebService {
 				e.printStackTrace();
 			}
 		}
-		return "Unsuccessfull";
+		return "No Login";
 	}
 	
 	/* Called during Student Registration */	
@@ -610,30 +629,37 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/castVote")
 	public String castVote(@QueryParam("utaID") String utaID, @QueryParam("candidateIds") String CandidateIds){
-		System.out.println("utaID : "+utaID+ " CandidateIds"+CandidateIds);
+		CandidateIds = CandidateIds.substring(1, CandidateIds.length() - 1);
+		System.out.println("utaID : "+utaID+ " CandidateIds -> "+CandidateIds);
 		int isCreated = 0;
 		// get Active Poll And then push data in "votecasted" table
 		String query = "SELECT idPoll FROM ivote.poll where isActive='true'";
-		String query_castVote = "INSERT INTO ivote.votecasted (utaID, yourPollPositionId, yourPollOptionId) "
+		String query_castVote = "INSERT INTO ivote.votecasted (utaID, PollId, PollOptionId) "
 				+ "VALUES(?,?,?)";
 		try {
 			conn = dbConnection();
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery(query);
-			// iterate through the java result  set
 	      while (rs.next())
 	      {
-	    	List<String> myList = new ArrayList<String>(Arrays.asList(CandidateIds.split(",")));
-	    	Iterator<String> itr=myList.iterator();  
-	    	  while(itr.hasNext()){  
-	    	   System.out.println(itr.next()); 
-	    	   	int id = rs.getInt("idPoll");
-		        prepStmt = conn.prepareStatement(query_castVote);
-		        prepStmt.setInt(1, Integer.parseInt(utaID));
-				prepStmt.setInt(2, id);
-				prepStmt.setInt(3, Integer.parseInt(itr.next()));
-				isCreated = prepStmt.executeUpdate();
-	    	  }  
+	    	  int id = rs.getInt("idPoll");
+	    	  if(CandidateIds.contains(",")){ 
+	    		  System.out.println("Here..");
+	    		  String[] str = CandidateIds.split(",");
+	    		  for(int i=0; i<str.length;i++){
+	    			prepStmt = conn.prepareStatement(query_castVote);
+	  		        prepStmt.setInt(1, Integer.parseInt(utaID));
+	  				prepStmt.setInt(2, id);
+	  				prepStmt.setInt(3, Integer.parseInt(str[i].trim()));
+	  				isCreated = prepStmt.executeUpdate();
+	    		  }
+	    	  }else{
+	  		        prepStmt = conn.prepareStatement(query_castVote);
+	  		        prepStmt.setInt(1, Integer.parseInt(utaID));
+	  				prepStmt.setInt(2, id);
+	  				prepStmt.setInt(3, Integer.parseInt(CandidateIds));
+	  				isCreated = prepStmt.executeUpdate();
+	    	  }
 			if(isCreated > 0 ){
 				return "Vote Casted";
 			}
