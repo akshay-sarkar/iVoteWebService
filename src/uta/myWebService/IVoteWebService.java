@@ -705,7 +705,20 @@ public class IVoteWebService {
 	}
 	
 	/* TODO: View Result */
-	
+	@GET
+	@Path("/viewResult")
+	@Produces(MediaType.TEXT_PLAIN)
+	public String viewResult() {
+		List<String> winners = new ArrayList<String>();
+		String w1 = "First";
+		String w2 = "Second";
+		winners.add(w1);
+		winners.add(w2);
+		System.out.println(winners.toString());
+		return winners.toString();
+
+	}
+
 	/* TODO: Candidate Management  - Add */
 	@GET
 	@Consumes(MediaType.TEXT_PLAIN)
