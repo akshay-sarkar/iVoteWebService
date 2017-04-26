@@ -43,7 +43,7 @@ public class IVoteWebService {
 	public Connection dbConnection(){
 		try {
 			Class.forName("com.mysql.cj.jdbc.Driver");
-			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ivote", "root", "");
+			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ivote", "root", "admin");
 			return conn;
 		}catch (ClassNotFoundException e) {
 			e.printStackTrace();
@@ -432,23 +432,30 @@ public class IVoteWebService {
 	@Consumes(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/displayCandidate")
-	public String displayCandidate(){
-		System.out.println("Reached Here.. displayCand");
+	public String displayCandidate(@QueryParam("pollID") String  pollID){
+		System.out.println("Reached Here.. displayCand  " + pollID);
 		try {
 			conn = dbConnection();
 			stmt = conn.createStatement();
-			rs = stmt.executeQuery("SELECT candidates.id,  candidates.candidateFname,"
-					+ " candidates.candidateLname  FROM ivote.candidates");
-			// iterate through the java result  set
+			rs = stmt.executeQuery("SELECT * FROM ivote.candidates where votePostionID="+pollID);
 	      while (rs.next())
 	      {
-	        int id = rs.getInt("id");
-	        String firstName = rs.getString("candidateFname");
-	        String lastname = rs.getString("candidateLname");
-	  
-	        data+= id + columentSeperator + firstName+ columentSeperator + lastname + lineSeperator; 
-	        		
-	        
+	    	  int id = rs.getInt("id");
+		        String firstName = rs.getString("candidateFname");
+		        String lastname = rs.getString("candidateLname");
+		        String candidateEmailId = rs.getString("candidateEmailId");
+		        String candidateDOB = rs.getString("candidateDOB");
+	    		String candidateGender = rs.getString("candidateGender");
+				String candidateCourse = rs.getString("candidateCourse");
+				String candidateQualities = rs.getString("candidateQualities");
+				String candidateInterests = rs.getString("candidateInterests");
+				String candidatesStudentOrganization = rs.getString("candidatesStudentOrganization");
+				String candidateCommunityServiceHours = rs.getString("candidateCommunityServiceHours");
+		       
+		        data+= id + columentSeperator + firstName+ columentSeperator + lastname + columentSeperator+ candidateEmailId
+		        		+ columentSeperator + candidateDOB + columentSeperator + candidateGender + columentSeperator + candidateCourse+
+		        		columentSeperator+ candidateQualities+ columentSeperator+ candidateInterests+ columentSeperator +
+		        		candidatesStudentOrganization+ columentSeperator + candidateCommunityServiceHours +lineSeperator;	
 	      }
 	      return data;
 		} catch (SQLException e) {
@@ -653,9 +660,47 @@ public class IVoteWebService {
 			@QueryParam("qualities") String qualities,
 			@QueryParam("interest") String interest){
 		System.out.println("Here .. "+qualities + "  "+interest);
-		
-		
 		/* TODO: Return Candidates here */
+
+		
+		String query = "SELECT * FROM ivote.candidates where votePostionID = (SELECT idPoll FROM ivote.poll where isActive='true')";
+		try {
+			conn = dbConnection();
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(query);
+	      while (rs.next())
+	      {
+	        int id = rs.getInt("id");
+	        String firstName = rs.getString("candidateFname");
+	        String lastname = rs.getString("candidateLname");
+	        String candidateEmailId = rs.getString("candidateEmailId");
+	        String candidateDOB = rs.getString("candidateDOB");
+    		String candidateGender = rs.getString("candidateGender");
+			String candidateCourse = rs.getString("candidateCourse");
+			String candidateQualities = rs.getString("candidateQualities");
+			String candidateInterests = rs.getString("candidateInterests");
+			String candidatesStudentOrganization = rs.getString("candidatesStudentOrganization");
+			String candidateCommunityServiceHours = rs.getString("candidateCommunityServiceHours");
+	       
+	        data+= id + columentSeperator + firstName+ columentSeperator + lastname + columentSeperator+ candidateEmailId
+	        		+ columentSeperator + candidateDOB + columentSeperator + candidateGender + columentSeperator + candidateCourse+
+	        		columentSeperator+ candidateQualities+ columentSeperator+ candidateInterests+ columentSeperator +
+	        		candidatesStudentOrganization+ columentSeperator + candidateCommunityServiceHours +lineSeperator; 
+	        		
+	        
+	      }
+	      return data;
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				rs.close();
+				stmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
 		return "";
 	}
 	
