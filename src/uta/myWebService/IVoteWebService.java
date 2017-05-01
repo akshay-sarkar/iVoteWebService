@@ -165,7 +165,7 @@ public class IVoteWebService {
 		        System.out.println("This is called from another thread.");
 		        System.out.println(this.myParam + "  "+ this.password + "  "+ category);
 		     // Recipient's email ID needs to be mentioned.
-		        String to = "akshay.sarkar.dbit@gmail.com;"+this.myParam;
+		        String to = this.myParam;
 		        // Sender's email ID needs to be mentioned
 		        String from = "ivoteapp.edu@gmail.com";
 
@@ -197,13 +197,13 @@ public class IVoteWebService {
 		        	   // Set Subject: header field
 			           message.setSubject("Your Credentials for the accessing the iVOte App.");
 			           // Now set the actual message
-			           message.setText("Email Id:"+ this.myParam +" and Password:"+this.password);
+			           message.setText("Email Id:  "+ this.myParam +" and Password:  "+this.password);
 
-		           }else{
+		           }else if(category.equalsIgnoreCase("candidateDelete"))  {
 		        	   // Set Subject: header field
 			           message.setSubject("Candidate Removed");
 			           // Now set the actual message
-			           message.setText("You have been removed from "+this.password);
+			           message.setText("You have been removed from Poll - '"+this.password+"'");
 		           }
 		           
 		           // Send message
@@ -368,7 +368,7 @@ public class IVoteWebService {
 			rs = stmt.executeQuery("select emailID,pwd from students where emailID ='"+emailID+"'");
 			if(rs.next()){
 				/* TODO: Send email to Registered Student */
-				sendEmailForgotPassword(rs.getString("emailID"), rs.getString("pwd"), null);
+				sendEmailForgotPassword(rs.getString("emailID"), rs.getString("pwd"), "forgotPassword");
 				return "Email Sent";
 			}else{
 				return "Not Registered Student. Please Register Yourself";
@@ -398,7 +398,7 @@ public class IVoteWebService {
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery("SELECT poll.idPoll,  poll.pollName,"
 					+ " poll.pollStartDate, poll.pollEndDate,"
-					+ " poll.isActive, poll.isResultNotified  FROM ivote.poll");
+					+ " poll.isActive, poll.isResultNotified  FROM ivote.poll order by poll.pollName");
 			// iterate through the java result  set
 	      while (rs.next())
 	      {
@@ -437,7 +437,7 @@ public class IVoteWebService {
 		try {
 			conn = dbConnection();
 			stmt = conn.createStatement();
-			rs = stmt.executeQuery("SELECT * FROM ivote.candidates where votePostionID="+pollID);
+			rs = stmt.executeQuery("SELECT * FROM ivote.candidates where votePostionID="+pollID+" order by candidateFname");
 	      while (rs.next())
 	      {
 	    	  int id = rs.getInt("id");
@@ -546,6 +546,7 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/activatePoll")
 	public String activatePoll(@QueryParam("pollId") String pollId){
+		System.out.println("activatePoll  pollId : "+pollId);
 		String query = "UPDATE ivote.poll SET isActive='true' WHERE idPoll = ?";
 		
 		try {
@@ -577,6 +578,7 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/deactivatePoll")
 	public String deactivatePoll(@QueryParam("pollId") String pollId){
+		System.out.println("pollId : "+pollId);
 		String query = "UPDATE ivote.poll SET isActive = 'false' WHERE idPoll = ?";
 		
 		try {
@@ -763,6 +765,7 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/isAlreadyVoted")
 	public String isAlreadyVoted(@QueryParam("utaID") String utaID, @QueryParam("pollId") String pollId){
+		System.out.println("isAlreadyVoted -> utaID : "+utaID+" pollId : "+pollId );
 		String query = "SELECT utaID, PollId, PollOptionId FROM ivote.votecasted "
 				+ "where PollId="+Integer.parseInt(pollId)+" and utaID="+Integer.parseInt(utaID);
 		try {
@@ -791,14 +794,42 @@ public class IVoteWebService {
 	@GET
 	@Path("/viewResult")
 	@Produces(MediaType.TEXT_PLAIN)
-	public String viewResult() {
-		List<String> winners = new ArrayList<String>();
-		String w1 = "First";
-		String w2 = "Second";
-		winners.add(w1);
-		winners.add(w2);
-		System.out.println(winners.toString());
-		return winners.toString();
+	public String viewResult(@QueryParam("pollId") String pollId) {
+		System.out.println("View Result "+pollId);
+		String query = "select pollOptionId as candidate_id, count(pollOptionId) as max_vote"
+				+ " from votecasted where PollId="+Integer.parseInt(pollId)+" group by PollOptionId  order by max_vote desc LIMIT 2";
+		
+		ResultSet rs_winner;
+		String query_winner_name = "SELECT candidateFname,candidateLname FROM ivote.candidates where id=?";
+		try {
+			conn = dbConnection();
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(query);
+			while(rs.next()){
+				int candidate_id = rs.getInt("candidate_id");
+				int max_vote = rs.getInt("max_vote");
+				
+				prepStmt = conn.prepareStatement(query_winner_name);
+				prepStmt.setInt(1, candidate_id);
+				rs_winner = prepStmt.executeQuery();
+				if(rs_winner.next()){
+					data += rs_winner.getString("candidateFname")+columentSeperator+rs_winner.getString("candidateLname")+columentSeperator+
+					candidate_id+columentSeperator+max_vote+lineSeperator;
+				}
+			}
+			return data;
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				rs.close();
+				stmt.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return data;
 
 	}
 
@@ -811,13 +842,15 @@ public class IVoteWebService {
 			@QueryParam("candidateFname") String candidateFname,
 			@QueryParam("candidateLname") String candidateLname,
 			@QueryParam("candidateEmailId") String candidateEmailId,
-			@QueryParam("candidateDOB") String candidateDOB,
+			@QueryParam("candidateDOB") String candidateDOB,//
 			@QueryParam("candidateGender") String candidateGender,
-			@QueryParam("candidateCourse") String candidateCourse,
+			@QueryParam("candidateCourse") String candidateCourse,//
 			@QueryParam("candidateQualities") String candidateQualities,
 			@QueryParam("candidateInterests") String candidateInterests,
 			@QueryParam("candidatesStudentOrganization") String candidatesStudentOrganization,
 			@QueryParam("candidateCommunityServiceHours") String candidateCommunityServiceHours){
+		
+		System.out.println("addCandidate.."+candidateGender);
 		String query = "INSERT INTO ivote.candidates ( votePostionID, "
 				+ "candidateFname, candidateLname, candidateEmailId, candidateDOB,"
 				+ " candidateGender, candidateCourse, candidateQualities, candidateInterests,"
@@ -825,6 +858,10 @@ public class IVoteWebService {
 				+ " VALUES ( ?, ? ,? ,? ,? ,? ,?, ?, ?, ?, ?)";
 		try {
 			conn = dbConnection();
+			
+			candidateQualities = candidateQualities.substring(1, candidateQualities.length() - 1);
+			candidateInterests = candidateInterests.substring(1, candidateInterests.length() - 1);
+			
 			prepStmt = conn.prepareStatement(query);
 			prepStmt.setInt(1, Integer.parseInt(votePostionID));
 			prepStmt.setString(2, candidateFname);
@@ -861,11 +898,12 @@ public class IVoteWebService {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Path("/deleteCandidate")
 	public String deleteCandidate(@QueryParam("candidateId") String candidateId){
-		
-		String query =  "SELECT candidates.candidateEmailId, poll.pollName FROM candidates join poll on candidates.votePostionID=poll.idPoll and id=?";
+		System.out.println(" deleteCandidate...Candidate Id : "+candidateId);
+		String query =  "SELECT candidates.candidateEmailId, poll.pollName FROM candidates join poll on candidates.votePostionID=poll.idPoll and id="+candidateId;
 		String deleteQuery =  "DELETE FROM ivote.candidates WHERE id=?";
 		try {
 			conn = dbConnection();
+			stmt = conn.createStatement();
 			rs = stmt.executeQuery(query);
 			// iterate through the java result  set
 		      while (rs.next())
@@ -875,8 +913,8 @@ public class IVoteWebService {
 				prepStmt.setInt(1, Integer.parseInt(candidateId));
 				int isDeleted = prepStmt.executeUpdate();
 				if(isDeleted > 0 ){
-					sendEmailForgotPassword(rs.getString("candidateEmailId"), rs.getString("pollName"), null);
-					return "Poll Deleted";
+					sendEmailForgotPassword(rs.getString("candidateEmailId"), rs.getString("pollName"), "candidateDelete");
+					return "Candidate Deleted";
 				}  
 		      }
 			
@@ -918,7 +956,12 @@ public class IVoteWebService {
 		try {
 			conn = dbConnection();
 			prepStmt = conn.prepareStatement(query);
-
+			
+			System.out.println("/editCandidate .. candidateQualities... "+ candidateQualities);
+			candidateQualities = candidateQualities.substring(1, candidateQualities.length() - 1);
+			candidateInterests = candidateInterests.substring(1, candidateInterests.length() - 1);
+			System.out.println("candidateQualities... "+ candidateQualities);
+			
 			prepStmt.setString(1, candidateFname);
 			prepStmt.setString(2, candidateLname);
 			prepStmt.setString(3, candidateEmailId);
