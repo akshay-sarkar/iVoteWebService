@@ -55,7 +55,7 @@ public class IVoteWebService {
 	/* FCM Service - https://github.com/MOSDEV82/fcmhelper */
 	public void sendNotification(String Message){
 		
-		String someValue = "Just a demo, really...";
+		String someValue = Message;
 		new Thread(new Runnable() {
 		    private String myParam;
 		    public Runnable init(String myParam) {
@@ -67,11 +67,11 @@ public class IVoteWebService {
 		        System.out.println("This is called from another thread.");
 		        System.out.println(this.myParam);
 				JsonObject notificationObject = new JsonObject();
-				notificationObject.addProperty("body", "iVote");
+				notificationObject.addProperty("body", "UTA Ambassador-iVOte");
 				notificationObject.addProperty("title", myParam);
 				FCMHelper fcm = FCMHelper.getInstance();
 				try {
-					String str = fcm.sendNotification(FCMHelper.TYPE_TO, "<DEVICE_TOKEN HERE>", notificationObject);
+					String str = fcm.sendNotification(FCMHelper.TYPE_TO, "fwwrRxRzj6o:APA91bFlmIth6-LKAfarJlzhYJ9NZ2mvNgwMd7PJnjuT52j-5HliOF3DhBhwb3yvtFyR4XNDDUFyR30jsjCUlDRfO3WmPUfM9NpVRvwn7UzRRVniLQMoGHAt-25ZbcMFu5jxh5jXcxKD", notificationObject);
 					System.out.println(str);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
@@ -244,7 +244,7 @@ public class IVoteWebService {
 			rs = stmt.executeQuery("select utaID,isAdmin from students where emailID='"+emailId+"' and pwd='"+pwd+"' and isVerified = 'true'");
 			if(rs.next()){
 				String 	utaID=rs.getString("utaID");
-				// sendNotification("Welcome Notfication !!"); /* unblock this for sending notification */
+				
 				if(rs.getString("isAdmin").equalsIgnoreCase("true")){
 					return "Admin";
 				}
@@ -285,11 +285,11 @@ public class IVoteWebService {
 	@Path("/register")
 	public String register(@QueryParam("fname") String fname, @QueryParam("lname") String lname,
 			@QueryParam("utaID") String utaID, @QueryParam("phone") String phone,
-			@QueryParam("pwd") String pwd, @QueryParam("emailID") String emailID){
+			@QueryParam("pwd") String pwd, @QueryParam("emailID") String emailID, @QueryParam("fb_token") String fb_token ){
 		System.out.println("Reached Here - register .. email= "+ emailID +" pwd="+pwd);
 		String query = "INSERT INTO students "
-				+ "( fname, lname, utaID, phone, pwd, emailID, isAdmin, isVerified, OTP) "
-				+ "VALUES  ( ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+				+ "( fname, lname, utaID, phone, pwd, emailID, isAdmin, isVerified, OTP,device_token) "
+				+ "VALUES  ( ?, ?, ?, ?, ?, ?, ?, ?, ?,?)";
 		
 		try {
 			conn = dbConnection();
@@ -303,6 +303,7 @@ public class IVoteWebService {
 			prepStmt.setString(7, "false");
 			prepStmt.setString(8, "false");
 			prepStmt.setString(9, "9299");
+			prepStmt.setString(10, fb_token);
 			int isCreated = prepStmt.executeUpdate();
 			if(isCreated > 0 ){
 				/* Send OTP to Student Email Id - 9299 */
@@ -623,6 +624,7 @@ public class IVoteWebService {
 			if(isUpdated > 0 ){
 				
 				/* TODO: Notification result to the students and candidates(email)  */
+				sendNotification("Result Announced for Poll - UTA Ambassador President "); /* unblock this for sending notification */
 				return "Result Sent";
 			}
 		} catch (SQLException e) {
