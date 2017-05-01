@@ -67,8 +67,8 @@ public class IVoteWebService {
 		        System.out.println("This is called from another thread.");
 		        System.out.println(this.myParam);
 				JsonObject notificationObject = new JsonObject();
-				notificationObject.addProperty("body", "UTA Ambassador-iVOte");
-				notificationObject.addProperty("title", myParam);
+				notificationObject.addProperty("title", "UTA Ambassador-iVOte");
+				notificationObject.addProperty("body", myParam);
 				FCMHelper fcm = FCMHelper.getInstance();
 				try {
 					String str = fcm.sendNotification(FCMHelper.TYPE_TO, "fwwrRxRzj6o:APA91bFlmIth6-LKAfarJlzhYJ9NZ2mvNgwMd7PJnjuT52j-5HliOF3DhBhwb3yvtFyR4XNDDUFyR30jsjCUlDRfO3WmPUfM9NpVRvwn7UzRRVniLQMoGHAt-25ZbcMFu5jxh5jXcxKD", notificationObject);
@@ -649,6 +649,7 @@ public class IVoteWebService {
 	public String notifyEndDate(@QueryParam("pollId") String pollId){
 		System.out.println(" notifyEndDate => "+ pollId);
 	    // TODO: Needs to send reminder notification to student regarding the poll end date and time.
+		sendNotification("You have not casted your vote for  UTA Ambassador President.\n The voting ends at 4/3/2017. Please vote at the earliest. ");
 		return "Poll Reminder Sent";
 	}
 	
